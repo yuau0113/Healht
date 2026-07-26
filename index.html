@@ -31,7 +31,7 @@
             <input type="hidden" name="stress_level" id="input-stress-level">
             <input type="hidden" name="test_date" id="input-test-date">
 
-            <button type="button" onclick="submitAndCalculate()">診断して送信・保存する</button>
+            <button type="button" onclick="submitAndCalculate()">結果を表示</button>
         </form>
     </div>
 
@@ -43,7 +43,7 @@
     </div>
 
     <div class="card">
-        <h2>過去の記録（この端末に保存されます）</h2>
+        <h2>過去の記録　</h2>
         <ul id="history-list" class="history-list"></ul>
         <button type="button" onclick="clearHistory()" style="background: #e74c3c; margin-top: 10px;">履歴をすべて削除</button>
     </div>
@@ -141,7 +141,7 @@
 
         document.getElementById("result-score").innerText = `合計スコア: ${totalScore}点 ／ 判定: ${level}`;
         document.getElementById("result-comment").innerText = comment;
-        document.getElementById("send-status").innerText = "スプレッドシートへ送信中...";
+        document.getElementById("send-status").innerText = " ";
         document.getElementById("result-area").style.display = "block";
 
         // 隠しinputに値をセット
@@ -158,7 +158,7 @@
             body: formData,
             mode: "no-cors"
         }).then(() => {
-            document.getElementById("send-status").innerText = "✓ スプレッドシートへの保存が完了しました！";
+            document.getElementById("send-status").innerText = " ";
         }).catch(error => {
             console.error("送信エラー:", error);
             document.getElementById("send-status").innerText = "⚠ 送信に失敗した可能性があります。";
