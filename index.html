@@ -22,23 +22,24 @@
 
     <h1>30問ストレスチェッカー</h1>
     <div class="card">
-        <p>直近1ヶ月間を振り返り、ご自身の状態に最も近いものを各問で選択してください。</p>
+        <p>直近１週間を振り返り、ご自身の状態に最も近いものを各問で選択してください。</p>
         
-        <form id="stress-form" action="https://script.google.com/macros/s/AKfycbw6XBMEvCiR1w-GbBTZOXSFWBKvZveHT9o0-uMEnpXWetMt0_vhqtUdBztaCAF9jlZ_/exec" method="POST">
+        <form id="stress-form" action="https://script.google.com/macros/s/AKfycbw6XBMEvCiR1w-GbBTZOXSFWBKvZveHT9o0-uMEnpXWetMt0_vhqtUdBztaCAF9jlZ_/exec">
             <div id="questions-container"></div>
             
             <input type="hidden" name="total_score" id="input-total-score">
             <input type="hidden" name="stress_level" id="input-stress-level">
             <input type="hidden" name="test_date" id="input-test-date">
 
-            <button type="button" onclick="submitAndCalculate()">結果を見る</button>
+            <button type="button" onclick="submitAndCalculate()">診断して送信・保存する</button>
         </form>
     </div>
 
     <div id="result-area">
-        <h2>診断結果</h2>
+        <h2>診断結果を表示</h2>
         <p id="result-score" style="font-size: 20px; font-weight: bold;"></p>
         <p id="result-comment"></p>
+        <p id="send-status" style="color: #27ae60; font-weight: bold; margin-top: 10px;"></p>
     </div>
 
     <div class="card">
@@ -136,21 +137,35 @@
             comment = "限界に近づいている可能性があります。無理をせず、専門機関や信頼できる人に相談してください。";
         }
 
+        let currentDate = new Date().toLocaleString();
+
         document.getElementById("result-score").innerText = `合計スコア: ${totalScore}点 ／ 判定: ${level}`;
         document.getElementById("result-comment").innerText = comment;
+        document.getElementById("send-status").innerText = "スプレッドシートへ送信中...";
         document.getElementById("result-area").style.display = "block";
 
-        let currentDate = new Date().toLocaleString();
+        // 隠しinputに値をセット
         document.getElementById("input-total-score").value = totalScore + "点";
         document.getElementById("input-stress-level").value = level;
         document.getElementById("input-test-date").value = currentDate;
 
+        // 裏側で非同期送信（画面遷移なし）
+        const form = document.getElementById("stress-form");
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: "POST",
+            body: formData,
+            mode: "no-cors"
+        }).then(() => {
+            document.getElementById("send-status").innerText = "✓ スプレッドシートへの保存が完了しました！";
+        }).catch(error => {
+            console.error("送信エラー:", error);
+            document.getElementById("send-status").innerText = "⚠ 送信に失敗した可能性があります。";
+        });
+
         saveHistory(totalScore, level, currentDate);
         loadHistory();
-
-        // スプレッドシートへデータを送信実行
-        const form = document.getElementById("stress-form");
-        form.submit();
 
         document.getElementById("result-area").scrollIntoView({ behavior: 'smooth' });
     }
