@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30問ストレスチェッカー</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f4f6f9; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
+        h1, h2 { text-align: center; color: #2c3e50; }
+        .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .question { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .question p { font-weight: bold; margin-bottom: 10px; }
+        .options label { margin-right: 15px; cursor: pointer; }
+        button { display: block; width: 100%; background: #3498db; color: #fff; border: none; padding: 15px; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #2980b9; }
+        #result-area { display: none; background: #e8f8f5; border: 2px solid #27ae60; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; }
+        .history-list { list-style: none; padding: 0; }
+        .history-list li { background: #fff; padding: 10px; margin-bottom: 5px; border-radius: 4px; border: 1px solid #ddd; display: flex; justify-content: space-between; }
+    </style>
+</head>
+<body>
+
+    <h1>30問ストレスチェッカー</h1>
+    <div class="card">
+        <p>直近1ヶ月間を振り返り、ご自身の状態に最も近いものを各問で選択してください。</p>
+        
+        <form id="stress-form" action="https://script.google.com/macros/s/AKfycbw6XBMEvCiR1w-GbBTZOXSFWBKvZveHT9o0-uMEnpXWetMt0_vhqtUdBztaCAF9jlZ_/exec" method="POST">
+            <div id="questions-container"></div>
+            
+            <input type="hidden" name="total_score" id="input-total-score">
+            <input type="hidden" name="stress_level" id="input-stress-level">
+            <input type="hidden" name="test_date" id="input-test-date">
+
+            <button type="button" onclick="submitAndCalculate()">結果を見る</button>
+        </form>
+    </div>
+
+    <div id="result-area">
+        <h2>診断結果</h2>
+        <p id="result-score" style="font-size: 20px; font-weight: bold;"></p>
+        <p id="result-comment"></p>
+    </div>
+
+    <div class="card">
+        <h2>過去の記録（この端末に保存されます）</h2>
+        <ul id="history-list" class="history-list"></ul>
+        <button type="button" onclick="clearHistory()" style="background: #e74c3c; margin-top: 10px;">履歴をすべて削除</button>
+    </div>
+
+<script>
+    const questions = [
+        "暴飲暴食をしてしまう、または逆に極端な食欲不振がある",
+        "お酒、タバコ、カフェインの量が増えた",
+        "スマホやネット、ゲームを見る時間が急増した（現実逃避行動）",
+        "衝動買いや不要な買い物が増えた",
+        "髪の毛を抜く、爪を噛む、貧乏揺すりなどの癖が出ている",
+        "性的な欲求や自慰の頻度に極端な変化がある（増えた、または完全に消失した）",
+        "パートナーとはせずに、自分一人での自慰行為の回数や欲求が以前と比べて増えた",
+        "寝つきが悪い、夜中に何度も目が覚める、朝すっきり起きられない",
+        "肩こり、首のコリ、原因不明の頭痛が続く",
+        "胃の痛み、腹痛、下痢や便秘などお腹の不調がある",
+        "慢性的なだるさ・疲労感が抜けない",
+        "動悸や息苦しさを感じることがある",
+        "口内炎ができやすい、または肌荒れが急に悪化した",
+        "めまいや立ちくらみ、耳鳴りを感じることがある",
+        "身体の免疫力が落ちていると感じる（風邪をひきやすいなど）",
+        "些細なことでイライラしたり、怒りがおさまらなかったりする",
+        "理由もなく不安になったり、悲しくなったりする",
+        "何をするにも億劫で、楽しみを感じられない（無気力感）",
+        "自分を責めてしまったり、ネガティブな思考がグルグル回る",
+        "集中力が続かず、仕事や家事でケアレスミスが増えた",
+        "周囲の人が自分に対して敵意を持っているように感じることがある",
+        "自分の存在価値や将来に対して極端に悲観的になる",
+        "感情のコントロールが効かなくなる感覚がある",
+        "人と会うのが面倒になり、連絡を返すのが億劫だ",
+        "仕事や役割に対して「投げ出したい」と感じることが増えた",
+        "他人の何気ない一言に深く傷ついたり、過敏に反応したりする",
+        "休日に趣味やリフレッシュを楽しもうとしても心が休まらない",
+        "周囲の期待やプレッシャーに押しつぶされそうになる",
+        "人との会話中に上の空になったり、話を聞き逃したりする",
+        "誰にも助けを求められず、孤立していると感じる"
+    ];
+
+    const container = document.getElementById("questions-container");
+
+    questions.forEach((q, index) => {
+        let qDiv = document.createElement("div");
+        qDiv.className = "question";
+        qDiv.innerHTML = `
+            <p>${index + 1}. ${q}</p>
+            <div class="options">
+                <label><input type="radio" name="q${index}" value="0" required> 全くない</label>
+                <label><input type="radio" name="q${index}" value="1"> たまにある</label>
+                <label><input type="radio" name="q${index}" value="2"> よくある</label>
+                <label><input type="radio" name="q${index}" value="3"> 常にある</label>
+            </div>
+        `;
+        container.appendChild(qDiv);
+    });
+
+    function submitAndCalculate() {
+        let totalScore = 0;
+        let answeredAll = true;
+
+        for (let i = 0; i < questions.length; i++) {
+            const radios = document.getElementsByName(`q${i}`);
+            let checked = false;
+            for (let r of radios) {
+                if (r.checked) {
+                    totalScore += parseInt(r.value);
+                    checked = true;
+                    break;
+                }
+            }
+            if (!checked) answeredAll = false;
+        }
+
+        if (!answeredAll) {
+            alert("すべての質問に回答してください。");
+            return;
+        }
+
+        let level = "";
+        let comment = "";
+        if (totalScore <= 25) {
+            level = "低ストレス（安定）";
+            comment = "心身ともに安定しています。現在の良い状態を維持しましょう。";
+        } else if (totalScore <= 50) {
+            level = "中ストレス（要注意）";
+            comment = "少し疲れが溜まっています。無意識の代償行動に気をつけ、意識的な休息をとりましょう。";
+        } else if (totalScore <= 75) {
+            level = "高ストレス（SOS状態）";
+            comment = "心身からのSOSサインが出ています。早めのケアや環境調整が必要です。";
+        } else {
+            level = "要警戒（限界レベル）";
+            comment = "限界に近づいている可能性があります。無理をせず、専門機関や信頼できる人に相談してください。";
+        }
+
+        document.getElementById("result-score").innerText = `合計スコア: ${totalScore}点 ／ 判定: ${level}`;
+        document.getElementById("result-comment").innerText = comment;
+        document.getElementById("result-area").style.display = "block";
+
+        let currentDate = new Date().toLocaleString();
+        document.getElementById("input-total-score").value = totalScore + "点";
+        document.getElementById("input-stress-level").value = level;
+        document.getElementById("input-test-date").value = currentDate;
+
+        saveHistory(totalScore, level, currentDate);
+        loadHistory();
+
+        // スプレッドシートへデータを送信実行
+        const form = document.getElementById("stress-form");
+        form.submit();
+
+        document.getElementById("result-area").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function saveHistory(score, level, date) {
+        let history = JSON.parse(localStorage.getItem("stress_history")) || [];
+        history.unshift({ date: date, score: score, level: level });
+        localStorage.setItem("stress_history", JSON.stringify(history));
+    }
+
+    function loadHistory() {
+        let history = JSON.parse(localStorage.getItem("stress_history")) || [];
+        let listElement = document.getElementById("history-list");
+        listElement.innerHTML = "";
+        
+        if (history.length === 0) {
+            listElement.innerHTML = "<li>保存された履歴はありません。</li>";
+            return;
+        }
+
+        history.forEach(item => {
+            let li = document.createElement("li");
+            li.innerHTML = `<span>${item.date}</span> <span><strong>${item.score}点</strong> (${item.level})</span>`;
+            listElement.appendChild(li);
+        });
+    }
+
+    function clearHistory() {
+        if (confirm("保存された履歴をすべて削除しますか？")) {
+            localStorage.removeItem("stress_history");
+            loadHistory();
+        }
+    }
+
+    window.onload = loadHistory;
+</script>
+
+</body>
+</html>
